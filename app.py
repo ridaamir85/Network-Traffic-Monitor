@@ -15,7 +15,7 @@ PORT_SERVICES = {
     110: 'POP3', 3306: 'MySQL', 8080: 'HTTP-ALT', 0: 'ICMP'
 }
 def get_service(port):
-    return PORT_SERVICES.get(port, f'Port-{port}')
+    return PORT_SERVICES.get(port, f'Port-{port}') 
 def init_csv():
     with open(CSV_FILE, 'w', newline='') as f:
         writer = csv.writer(f)
