@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetMonitor — Network Traffic Analysis</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%237c6dff'/%3E%3Cstop offset='100%25' stop-color='%23a855f7'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cpath d='M5 16h4l3-8 4 16 3-8h8' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --page: #1a1d2e;
+            --surface: #232739;
+            --surface-2: #2a2e44;
+            --surface-3: #323754;
+            --text: #e6e9f5;
+            --text-2: #b8bcd1;
+            --text-3: #8a8ea8;
+            --text-4: #5e6280;
+            --line: #353a55;
+            --line-2: #424766;
+            --primary: #7c6dff;
+            --primary-2: #5d4dec;
+            --primary-soft: rgba(124, 109, 255, 0.15);
+            --emerald: #2ecf8a;
+            --emerald-soft: rgba(46, 207, 138, 0.15);
+            --rose: #f25086;
+            --rose-soft: rgba(242, 80, 134, 0.15);
+            --amber: #f5a524;
+            --amber-soft: rgba(245, 165, 36, 0.15);
+            --violet: #a855f7;
+            --violet-soft: rgba(168, 85, 247, 0.15);
+            --cyan: #22d3ee;
+            --cyan-soft: rgba(34, 211, 238, 0.15);
+            --term-bg: #0d1117;
+            --term-bg-2: #161b22;
+            --term-border: #30363d;
+            --term-text: #e6edf3;
+            --term-dim: #7d8590;
+            --term-green: #3fb950;
+            --term-amber: #d29922;
+            --term-red: #f85149;
+            --term-cyan: #79c0ff;
+            --tcp: #7c6dff;
+            --udp: #2ecf8a;
+            --icmp: #f25086;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2), 0 1px 1px rgba(0, 0, 0, 0.15);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.25), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+            --shadow-lg: 0 10px 24px -8px rgba(124, 109, 255, 0.3), 0 4px 8px -4px rgba(0, 0, 0, 0.2);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            background: var(--page);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            font-feature-settings: 'cv11', 'ss01';
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: -200px; left: -200px;
+            width: 700px; height: 700px;
+            background: radial-gradient(circle, rgba(124, 109, 255, 0.18) 0%, transparent 65%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -250px; right: -200px;
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(242, 80, 134, 0.12) 0%, transparent 65%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px 28px 48px;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            margin-bottom: 24px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .brand-mark {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--violet) 100%);
+            display: grid;
+            place-items: center;
+            position: relative;
+            box-shadow: 0 4px 14px rgba(124, 109, 255, 0.4);
+        }
+        .brand-mark svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .brand-text { display: flex; flex-direction: column; gap: 1px; }
+        .brand-name {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.4px;
+            color: var(--text);
+            line-height: 1.2;
+        }
+        .brand-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--text-3);
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+        .header-meta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 14px;
+            background: var(--primary-soft);
+            border: 1px solid var(--primary);
+            border-radius: 100px;
+            font-size: 12px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .header-meta::before {
+            content: '';
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: var(--primary);
+            box-shadow: 0 0 8px var(--primary);
+        }
+        .hero {
+            text-align: center;
+            margin: 32px 0 36px;
+        }
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 12px;
+            background: var(--primary-soft);
+            color: var(--primary);
+            border-radius: 100px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            margin-bottom: 18px;
+            border: 1px solid var(--primary-soft);
+        }
+        .hero-eyebrow::before {
+            content: '';
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+        .hero-title {
+            font-size: clamp(34px, 5vw, 52px);
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            line-height: 1.05;
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+        .hero-title .grad {
+            background: linear-gradient(120deg, var(--primary) 0%, var(--violet) 50%, var(--rose) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero-sub {
+            font-size: 15px;
+            color: var(--text-2);
+            max-width: 540px;
+            margin: 0 auto;
+        }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: var(--shadow-sm);
+        }
+        .control-deck {
+            padding: 18px 22px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 24px;
+            align-items: center;
+        }
+        @media (max-width: 880px) {
+            .control-deck { grid-template-columns: 1fr; }
+        }
+        .status-block {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .status-dot {
+            position: relative;
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: var(--rose);
+            flex-shrink: 0;
+            box-shadow: 0 0 0 4px var(--rose-soft);
+        }
+        .status-dot::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            color: var(--emerald);
+            opacity: 0;
+        }
+        .status-dot.active {
+            background: var(--emerald);
+            box-shadow: 0 0 0 4px var(--emerald-soft);
+            color: var(--emerald);
+        }
+        .status-dot.active::after {
+            animation: pulse-ring 1.6s ease-out infinite;
+            opacity: 1;
+        }
+        .status-dot.previous {
+            background: var(--violet);
+            box-shadow: 0 0 0 4px var(--violet-soft);
+        }
+        .status-dot.refreshed {
+            background: var(--amber);
+            box-shadow: 0 0 0 4px var(--amber-soft);
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            100% { transform: scale(2.4); opacity: 0; }
+        }
+        .status-meta { display: flex; flex-direction: column; gap: 1px; }
+        .status-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--text-3);
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: -0.2px;
+        }
+        .status-records {
+            margin-left: auto;
+            padding-left: 22px;
+            border-left: 1px solid var(--line);
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        .status-records .num {
+            font-size: 26px;
+            line-height: 1;
+            color: var(--primary);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        .button-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 16px;
+            border-radius: 9px;
+            border: 1px solid var(--line-2);
+            background: var(--surface-2);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .btn:hover {
+            background: var(--surface-3);
+            border-color: var(--text-4);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+        .btn:active { transform: translateY(0); }
+        .btn.primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            box-shadow: 0 2px 10px rgba(124, 109, 255, 0.4);
+        }
+        .btn.primary:hover {
+            background: var(--primary-2);
+            border-color: var(--primary-2);
+            box-shadow: 0 6px 18px rgba(124, 109, 255, 0.5);
+        }
+        .btn.danger {
+            background: var(--surface-2);
+            border-color: var(--rose);
+            color: var(--rose);
+        }
+        .btn.danger:hover {
+            background: var(--rose);
+            color: white;
+            border-color: var(--rose);
+            box-shadow: 0 6px 18px rgba(242, 80, 134, 0.4);
+        }
+        .btn .ico { font-size: 11px; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .stat {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 18px 20px;
+            position: relative;
+            transition: all 0.25s ease;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+        .stat:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--accent);
+        }
+        .stat::after {
+            content: '';
+            position: absolute;
+            top: 0; right: 0;
+            width: 120px; height: 120px;
+            background: radial-gradient(circle at top right, var(--accent-glow), transparent 70%);
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .stat[data-k="total"] { --accent: var(--primary); --accent-glow: var(--primary-soft); }
+        .stat[data-k="tcp"]   { --accent: var(--cyan); --accent-glow: var(--cyan-soft); }
+        .stat[data-k="udp"]   { --accent: var(--emerald); --accent-glow: var(--emerald-soft); }
+        .stat[data-k="icmp"]  { --accent: var(--rose); --accent-glow: var(--rose-soft); }
+        .stat[data-k="avg"]   { --accent: var(--amber); --accent-glow: var(--amber-soft); }
+        .stat-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            position: relative;
+            z-index: 1;
+        }
+        .stat-name {
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            color: var(--text-2);
+            font-weight: 600;
+            letter-spacing: 0.2px;
+        }
+        .stat-icon {
+            width: 30px; height: 30px;
+            border-radius: 8px;
+            background: var(--accent-glow);
+            display: grid;
+            place-items: center;
+            font-size: 13px;
+            color: var(--accent);
+            font-weight: 700;
+            border: 1px solid var(--accent-glow);
+        }
+        .stat-num {
+            font-size: 36px;
+            font-weight: 800;
+            line-height: 1;
+            color: var(--text);
+            letter-spacing: -1.2px;
+            position: relative;
+            z-index: 1;
+        }
+        .stat-foot {
+            font-size: 11px;
+            color: var(--text-3);
+            margin-top: 6px;
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.2px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title .num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--primary);
+            background: var(--primary-soft);
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-weight: 600;
+            border: 1px solid var(--primary-soft);
+        }
+        .section-sub {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-3);
+            font-weight: 500;
+        }
+        .filter-card {
+            padding: 20px 22px;
+            margin-bottom: 20px;
+        }
+        .card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--line);
+        }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            align-items: end;
+        }
+        .field { display: flex; flex-direction: column; gap: 6px; }
+        .field label {
+            font-size: 11px;
+            color: var(--text-2);
+            font-weight: 600;
+            letter-spacing: 0.1px;
+        }
+        .field select, .field input {
+            padding: 10px 12px;
+            background: var(--surface-2);
+            border: 1.5px solid var(--line-2);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+        .field select:focus, .field input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-soft);
+            background: var(--surface-3);
+        }
+        .field input::placeholder { color: var(--text-4); }
+
+        .filter-acts { display: flex; gap: 8px; }
+        .filter-acts .btn { flex: 1; justify-content: center; }
+        .log-card {
+            margin-bottom: 20px;
+            overflow: hidden;
+            background: var(--term-bg);
+            border: 1px solid var(--term-border);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+        .log-head {
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--term-bg-2);
+            border-bottom: 1px solid var(--term-border);
+        }
+        .log-head .section-title {
+            color: var(--term-text);
+        }
+        .log-head .section-title .num {
+            color: var(--term-cyan);
+            background: rgba(121, 192, 255, 0.15);
+            border-color: rgba(121, 192, 255, 0.2);
+        }
+        .log-head .section-sub {
+            color: var(--term-dim);
+        }
+        .term-dots {
+            display: flex;
+            gap: 6px;
+            margin-right: 12px;
+        }
+        .term-dots span {
+            width: 11px; height: 11px;
+            border-radius: 50%;
+        }
+        .term-dots span:nth-child(1) { background: #ff5f57; }
+        .term-dots span:nth-child(2) { background: #febc2e; }
+        .term-dots span:nth-child(3) { background: #28c840; }
+        .log-head-left {
+            display: flex;
+            align-items: center;
+        }
+        .log-body {
+            padding: 14px 20px;
+            max-height: 240px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.7;
+            background: var(--term-bg);
+            color: var(--term-text);
+        }
+        .log-body::-webkit-scrollbar { width: 8px; }
+        .log-body::-webkit-scrollbar-track { background: var(--term-bg-2); }
+        .log-body::-webkit-scrollbar-thumb {
+            background: var(--term-border);
+            border-radius: 4px;
+        }
+        .log-body::-webkit-scrollbar-thumb:hover { background: var(--term-dim); }
+        .log-line {
+            color: var(--term-text);
+            margin-bottom: 4px;
+            padding-left: 18px;
+            position: relative;
+            opacity: 0;
+            animation: slideIn 0.3s forwards;
+            font-weight: 400;
+        }
+        .log-line::before {
+            content: '$';
+            position: absolute;
+            left: 0; top: 0;
+            color: var(--term-cyan);
+            font-weight: 600;
+        }
+        .log-line .ts {
+            color: var(--term-dim);
+            margin-right: 10px;
+            font-weight: 500;
+        }
+        .log-line.warn { color: var(--term-amber); }
+        .log-line.warn::before { content: '!'; color: var(--term-amber); }
+        .log-line.err { color: var(--term-red); }
+        .log-line.err::before { content: '✗'; color: var(--term-red); }
+        .log-line.ok { color: var(--term-green); }
+        .log-line.ok::before { content: '›'; color: var(--term-green); }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .table-card {
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .table-head {
+            padding: 16px 22px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface-2);
+            border-bottom: 1px solid var(--line);
+        }
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: var(--emerald);
+            color: white;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            box-shadow: 0 2px 10px rgba(46, 207, 138, 0.4);
+        }
+        .live-badge .dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: white;
+            animation: blink 1.2s infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0.3; }
+        }
+        .table-scroll { max-height: 560px; overflow-y: auto; }
+        .table-scroll::-webkit-scrollbar { width: 8px; }
+        .table-scroll::-webkit-scrollbar-track { background: var(--surface-2); }
+        .table-scroll::-webkit-scrollbar-thumb {
+            background: var(--line-2);
+            border-radius: 4px;
+        }
+        .table-scroll::-webkit-scrollbar-thumb:hover { background: var(--text-4); }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+        }
+        thead th {
+            position: sticky; top: 0;
+            background: var(--surface-2);
+            padding: 14px 18px;
+            text-align: left;
+            font-size: 12px;
+            color: var(--text-2);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            font-weight: 700;
+            border-bottom: 2px solid var(--line-2);
+            font-family: 'Inter', sans-serif;
+            z-index: 2;
+        }
+        tbody td {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--line);
+            color: var(--text);
+            font-weight: 500;
+        }
+        tbody tr { transition: background 0.15s; }
+        tbody tr:hover { background: var(--surface-2); }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            border: 1px solid;
+        }
+        .pill::before {
+            content: '';
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+        .pill.tcp { color: var(--tcp); background: var(--primary-soft); border-color: var(--primary-soft); }
+        .pill.udp { color: var(--udp); background: var(--emerald-soft); border-color: var(--emerald-soft); }
+        .pill.icmp { color: var(--icmp); background: var(--rose-soft); border-color: var(--rose-soft); }
+        .ip-mono { color: var(--text-2); font-weight: 500; }
+        .service-cell {
+            color: var(--cyan);
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+        }
+        .size-unit { color: var(--text-4); font-size: 12px; font-weight: 500; }
+        .empty {
+            text-align: center;
+            padding: 60px 24px;
+            color: var(--text-3);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+        }
+        .empty strong {
+            display: block;
+            font-size: 16px;
+            color: var(--text-2);
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+        footer {
+            text-align: center;
+            padding: 24px 0 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-3);
+            font-weight: 500;
+        }
+        footer strong {
+            color: var(--primary);
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="brand">
+                <div class="brand-mark">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 12h3l3-8 4 16 3-8h5"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <div class="brand-name">NetMonitor</div>
+                </div>
+            </div>
+            <div class="header-meta">Real-Time Capture</div>
+        </header>
+        <div class="hero">
+            <div class="hero-eyebrow">Live Packet Analysis</div>
+            <h1 class="hero-title">Network Traffic <span class="grad">Monitor</span></h1>
+            <p class="hero-sub">See every packet flow through your network — TCP, UDP and ICMP traffic with filters and live statistics.</p>
+        </div>
+        <div class="card control-deck">
+            <div class="status-block">
+                <div class="status-dot" id="statusPulse"></div>
+                <div class="status-meta">
+                    <div class="status-label">Status</div>
+                    <div class="status-value" id="statusValue">Monitoring Stopped</div>
+                </div>
+                <div class="status-records">
+                    <div class="status-label">Records</div>
+                    <div class="num" id="recordCount">0</div>
+                </div>
+            </div>
+            <div class="button-row">
+                <button class="btn primary" onclick="startMonitoring()">
+                    <span class="ico">▶</span> Start Monitoring
+                </button>
+                <button class="btn danger" onclick="stopMonitoring()">
+                    <span class="ico">■</span> Stop
+                </button>
+                <button class="btn" onclick="loadPrevious()">
+                    <span class="ico">⟲</span> Load Previous
+                </button>
+                <button class="btn" onclick="clearDisplay()">
+                    <span class="ico">⟳</span> Clear
+                </button>
+            </div>
+        </div>
+        <div class="stats">
+            <div class="stat" data-k="total">
+                <div class="stat-top">
+                    <div class="stat-name">Total Packets</div>
+                    <div class="stat-icon">⬢</div>
+                </div>
+                <div class="stat-num" id="totalPackets">0</div>
+                <div class="stat-foot">All captured</div>
+            </div>
+            <div class="stat" data-k="tcp">
+                <div class="stat-top">
+                    <div class="stat-name">TCP</div>
+                    <div class="stat-icon">↔</div>
+                </div>
+                <div class="stat-num" id="tcpCount">0</div>
+                <div class="stat-foot">Reliable stream</div>
+            </div>
+            <div class="stat" data-k="udp">
+                <div class="stat-top">
+                    <div class="stat-name">UDP</div>
+                    <div class="stat-icon">→</div>
+                </div>
+                <div class="stat-num" id="udpCount">0</div>
+                <div class="stat-foot">Datagram</div>
+            </div>
+            <div class="stat" data-k="icmp">
+                <div class="stat-top">
+                    <div class="stat-name">ICMP</div>
+                    <div class="stat-icon">◈</div>
+                </div>
+                <div class="stat-num" id="icmpCount">0</div>
+                <div class="stat-foot">Control echo</div>
+            </div>
+            <div class="stat" data-k="avg">
+                <div class="stat-top">
+                    <div class="stat-name">Avg Size</div>
+                    <div class="stat-icon">∿</div>
+                </div>
+                <div class="stat-num" id="avgSize">0</div>
+                <div class="stat-foot">Bytes per packet</div>
+            </div>
+        </div>
+        <div class="card filter-card">
+            <div class="card-head">
+                <div class="section-title">
+                    Filter Packets
+                </div>
+                <div class="section-sub">Search & Refine</div>
+            </div>
+            <div class="filter-grid">
+                <div class="field">
+                    <label>Protocol</label>
+                    <select id="protocolFilter">
+                        <option value="ALL">All Protocols</option>
+                        <option value="TCP">TCP</option>
+                        <option value="UDP">UDP</option>
+                        <option value="ICMP">ICMP</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Source IP</label>
+                    <input type="text" id="srcIpFilter" placeholder="192.168.1.5">
+                </div>
+                <div class="field">
+                    <label>Destination IP</label>
+                    <input type="text" id="dstIpFilter" placeholder="8.8.8.8">
+                </div>
+                <div class="filter-acts">
+                    <button class="btn primary" onclick="applyFilter()">Apply</button>
+                    <button class="btn" onclick="resetFilter()">Reset</button>
+                </div>
+            </div>
+        </div>
+        <div class="card log-card">
+            <div class="log-head">
+                <div class="log-head-left">
+                    <div class="term-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <div class="section-title">
+                        System Logs
+                    </div>
+                </div>
+                <div class="section-sub">~/netmonitor</div>
+            </div>
+            <div class="log-body" id="logSection">
+                <div class="log-line ok"><span class="ts">--:--:--</span>System initialized</div>
+                <div class="log-line"><span class="ts">--:--:--</span>Waiting for monitoring to start</div>
+            </div>
+        </div>
+
+        <div class="card table-card">
+            <div class="table-head">
+                <div class="section-title">
+                    Captured Packets
+                </div>
+                <div class="live-badge" id="liveBadge" style="display:none">
+                    <span class="dot"></span> LIVE
+                </div>
+            </div>
+            <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Source IP</th>
+                        <th>Destination IP</th>
+                        <th>Protocol</th>
+                        <th>Size</th>
+                        <th>Src Port</th>
+                        <th>Dst Port</th>
+                        <th>Service</th>
+                        </tr>
+                </thead>
+                <tbody id="dataTable">
+                    <tr><td colspan="8" class="empty">
+                        <strong>No data yet</strong>
+                        Press Start Monitoring to begin capturing packets
+                    </td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <footer>
+        <strong>NetMonitor</strong> · Network Traffic Monitoring & Analysis Platform
+        </footer>
+    </div>
+    <script>
+        function setStatus(state, text) {
+            const pulse = document.getElementById('statusPulse');
+            const value = document.getElementById('statusValue');
+            const live = document.getElementById('liveBadge');
+            pulse.className = 'status-dot ' + (state === 'idle' ? '' : state);
+            value.textContent = text;
+            live.style.display = state === 'active' ? 'inline-flex' : 'none';
+        }
+        function startMonitoring() {
+            fetch('/start', {method: 'POST'})
+            .then(r => r.json())
+            .then(() => {
+                setStatus('active', 'Monitoring Active');
+                addLog('Monitoring started - capturing real time packets', 'ok');
+                loadData();
+                window.refreshInterval = setInterval(loadData, 3000);
+            })
+            .catch(() => addLog('Failed to start monitoring', 'err'));
+        }
+        function stopMonitoring() {
+            fetch('/stop', {method: 'POST'})
+            .then(r => r.json())
+            .then(() => {
+                setStatus('idle', 'Monitoring Stopped');
+                clearInterval(window.refreshInterval);
+                addLog('Monitoring stopped', 'warn');
+            });
+        }
+        function loadPrevious() {
+            document.getElementById('protocolFilter').value = 'ALL';
+            document.getElementById('srcIpFilter').value = '';
+            document.getElementById('dstIpFilter').value = '';
+            loadData();
+            setStatus('previous', 'Viewing Previous Session');
+            addLog('Previous session loaded from traffic_data.csv', 'ok');
+        }
+        function clearDisplay() {
+            document.getElementById('dataTable').innerHTML =
+                '<tr><td colspan="8" class="empty"><strong>Display cleared</strong>Data is still saved in CSV file</td></tr>';
+            setStatus('refreshed', 'Display Refreshed');
+            ['totalPackets','tcpCount','udpCount','icmpCount','avgSize','recordCount'].forEach(id => {
+                document.getElementById(id).textContent = '0';
+            });
+            addLog('Display cleared - data still saved in CSV file', 'warn');
+        }
+        function applyFilter() {
+            const p = document.getElementById('protocolFilter').value;
+            const s = document.getElementById('srcIpFilter').value;
+            const d = document.getElementById('dstIpFilter').value;
+            fetch(`/data?protocol=${p}&src_ip=${s}&dst_ip=${d}`)
+            .then(r => r.json())
+            .then(result => {
+                updateStats(result.stats);
+                updateTable(result.data);
+                addLog(`Filter applied - ${result.stats.total_packets} packets found`, 'ok');
+            });
+        }
+        function resetFilter() {
+            document.getElementById('protocolFilter').value = 'ALL';
+            document.getElementById('srcIpFilter').value = '';
+            document.getElementById('dstIpFilter').value = '';
+            fetch('/data?protocol=ALL&src_ip=&dst_ip=')
+            .then(r => r.json())
+            .then(result => {
+                updateStats(result.stats);
+                updateTable(result.data);
+                addLog(`Filter reset - showing all ${result.stats.total_packets} packets`, 'ok');
+            });
+        }
+        function loadData() {
+            const p = document.getElementById('protocolFilter').value;
+            const s = document.getElementById('srcIpFilter').value;
+            const d = document.getElementById('dstIpFilter').value;
+            fetch(`/data?protocol=${p}&src_ip=${s}&dst_ip=${d}`)
+            .then(r => r.json())
+            .then(result => {
+                updateStats(result.stats);
+                updateTable(result.data);
+            });
+        }
+        function updateStats(s) {
+            document.getElementById('totalPackets').textContent = s.total_packets;
+            document.getElementById('tcpCount').textContent = s.tcp_count;
+            document.getElementById('udpCount').textContent = s.udp_count;
+            document.getElementById('icmpCount').textContent = s.icmp_count;
+            document.getElementById('avgSize').textContent = s.avg_packet_size;
+            document.getElementById('recordCount').textContent = s.total_packets;
+        }
+        function updateTable(data) {
+            const tbody = document.getElementById('dataTable');
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty"><strong>No matches</strong>No records match the current filter</td></tr>';
+                return;
+            }
+            const recent = data.slice(-100).reverse();
+            tbody.innerHTML = recent.map(row => `
+                <tr>
+                    <td>${row.Time}</td>
+                    <td class="ip-mono">${row.Source_IP}</td>
+                    <td class="ip-mono">${row.Destination_IP}</td>
+                    <td><span class="pill ${row.Protocol.toLowerCase()}">${row.Protocol}</span></td>
+                    <td>${row.Packet_Size} <span class="size-unit">B</span></td>
+                    <td>${row.Source_Port}</td>
+                    <td>${row.Destination_Port}</td>
+                    <td class="service-cell">${row.Service}</td>
+                </tr>
+            `).join('');
+        }
+        function addLog(message, type = '') {
+            const log = document.getElementById('logSection');
+            const time = new Date().toTimeString().slice(0, 8);
+            const line = document.createElement('div');
+            line.className = 'log-line ' + type;
+            line.innerHTML = `<span class="ts">${time}</span>${message}`;
+            log.appendChild(line);
+            log.scrollTop = log.scrollHeight;
+            while (log.children.length > 60) log.removeChild(log.firstChild);
+        }
+    </script>
+</body>
+</html>
